@@ -44,7 +44,7 @@ def fit_pcfg(forms, p, V=10, S=2, num_iter=10000, print_every=1000, device=DEVIC
         lnZ = torch.logaddexp(omega_logit.logsumexp(-1), R_logit.logsumexp(dim=(-1, -2)))
         R = (R_logit - lnZ[:, None, None]).exp()
         omega = (omega_logit - lnZ[:, None]).exp()
-        model = PCFG(R, omega)
+        model = PCFG(R, omega, device=device)
         lnq = model.score(forms).log()
         loss = -p @ lnq
         loss.backward()
