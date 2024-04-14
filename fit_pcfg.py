@@ -3,6 +3,8 @@ import itertools
 import torch
 import opt_einsum
 
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 class PCFG:
     """ PCFG in Chomsky Normal Form. """
     def __init__(self, R, omega):
@@ -32,8 +34,8 @@ def bitstrings(K, V=2):
 
 def fit_pcfg(forms, p, V=10, S=2, num_iter=10000, print_every=1000, **kwds):
     """ Assumes all forms are the same length. """
-    R_logit = torch.randn(V, V, V).requires_grad_(True)
-    omega_logit = torch.randn(V, S).requires_grad_(True)
+    R_logit = torch.randn(V, V, V).requires_grad_(True).to(DEVICE)
+    omega_logit = torch.randn(V, S).requires_grad_(True).to(DEVICE)
     target_entropy = -torch.xlogy(p, p).sum().item()
     opt = torch.optim.AdamW(params=[R_logit, omega_logit], **kwds)
     for i in range(num_iter):
