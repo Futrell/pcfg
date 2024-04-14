@@ -34,8 +34,8 @@ def bitstrings(K, V=2):
 
 def fit_pcfg(forms, p, V=10, S=2, num_iter=10000, print_every=1000, **kwds):
     """ Assumes all forms are the same length. """
-    R_logit = torch.randn(V, V, V).to(DEVICE).requires_grad_(True)
-    omega_logit = torch.randn(V, S).to(DEVICE).requires_grad_(True)
+    R_logit = torch.randn(V, V, V, requires_grad=True, device=DEVICE)
+    omega_logit = torch.randn(V, S, requires_grad=True, device=DEVICE)
     target_entropy = -torch.xlogy(p, p).sum().item()
     opt = torch.optim.AdamW(params=[R_logit, omega_logit], **kwds)
     for i in range(num_iter):
