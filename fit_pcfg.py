@@ -22,6 +22,8 @@ class PCFG:
         chart = torch.zeros(B, T, T, self.V).to(self.device)
         chart[:, 0] = self.omega[:, xs].permute(1,2,0) # batch x span size x start index x label
         for s in range(1, T): # span lengths
+            t = torch.arange(T-s)
+            # now want left to be a chart of shape BSTL, where S is the current split size.
             for t in range(T-s): # start indices
                 # w_A(t,s) = \sum_{k=1}^{s-1} \sum_B \sum_C w_{ABC} * w_B(t, k) * w_C(t+k+1, k-s-1)
                 k = torch.arange(s) # split indices
@@ -33,12 +35,21 @@ class PCFG:
 def bitstrings(K, V=2):
     return torch.LongTensor(list(itertools.product(range(V), repeat=K)))
 
-def fit_pcfg(forms, p, V=10, S=2, num_iter=10000, print_every=1000, device=DEVICE, **kwds):
+def fit_pcfg(forms,
+             p,
+             V=10,
+             S=2,
+             num_iter=10000,
+             print_every=1000,
+             normalize=False,
+             device=DEVICE,
+             lr=.1,
+             **kwds):
     """ Assumes all forms are the same length. """
     R_logit = torch.randn(V, V, V, requires_grad=True, device=device)
     omega_logit = torch.randn(V, S, requires_grad=True, device=device)
     target_entropy = -torch.xlogy(p, p).sum().item()
-    opt = torch.optim.AdamW(params=[R_logit, omega_logit], **kwds)
+    opt = torch.optim.AdamW(params=[R_logit, omega_logit], lr=lr, **kwds)
     for i in range(num_iter):
         opt.zero_grad()
         lnZ = torch.logaddexp(omega_logit.logsumexp(-1), R_logit.logsumexp(dim=(-1, -2)))
@@ -46,6 +57,8 @@ def fit_pcfg(forms, p, V=10, S=2, num_iter=10000, print_every=1000, device=DEVIC
         omega = (omega_logit - lnZ[:, None]).exp()
         model = PCFG(R, omega, device=device)
         lnq = model.score(forms).log()
+        if normalize:
+            lnq = lnq.log_softmax(-1)
         loss = -p @ lnq
         loss.backward()
         if i % print_every == 0:
