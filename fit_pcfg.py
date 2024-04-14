@@ -18,7 +18,7 @@ class PCFG:
 
     def score(self, xs):
         B, T = xs.shape
-        chart = torch.zeros(B, T, T, self.V)
+        chart = torch.zeros(B, T, T, self.V).to(DEVICE)
         chart[:, 0] = self.omega[:, xs].permute(1,2,0) # batch x span size x start index x label
         for s in range(1, T): # span lengths
             for t in range(T-s): # start indices
