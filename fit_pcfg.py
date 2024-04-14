@@ -7,10 +7,11 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class PCFG:
     """ PCFG in Chomsky Normal Form. """
-    def __init__(self, R, omega):
+    def __init__(self, R, omega, device=DEVICE):
         self.R = R
         self.omega = omega
         self.V, self.S = self.omega.shape
+        self.device = device
         
         X, Y, Z = R.shape
         W, S = omega.shape
@@ -18,7 +19,7 @@ class PCFG:
 
     def score(self, xs):
         B, T = xs.shape
-        chart = torch.zeros(B, T, T, self.V).to(DEVICE)
+        chart = torch.zeros(B, T, T, self.V).to(self.device)
         chart[:, 0] = self.omega[:, xs].permute(1,2,0) # batch x span size x start index x label
         for s in range(1, T): # span lengths
             for t in range(T-s): # start indices
@@ -32,10 +33,10 @@ class PCFG:
 def bitstrings(K, V=2):
     return torch.LongTensor(list(itertools.product(range(V), repeat=K)))
 
-def fit_pcfg(forms, p, V=10, S=2, num_iter=10000, print_every=1000, **kwds):
+def fit_pcfg(forms, p, V=10, S=2, num_iter=10000, print_every=1000, device=DEVICE, **kwds):
     """ Assumes all forms are the same length. """
-    R_logit = torch.randn(V, V, V, requires_grad=True, device=DEVICE)
-    omega_logit = torch.randn(V, S, requires_grad=True, device=DEVICE)
+    R_logit = torch.randn(V, V, V, requires_grad=True, device=device)
+    omega_logit = torch.randn(V, S, requires_grad=True, device=device)
     target_entropy = -torch.xlogy(p, p).sum().item()
     opt = torch.optim.AdamW(params=[R_logit, omega_logit], **kwds)
     for i in range(num_iter):
